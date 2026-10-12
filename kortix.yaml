@@ -1,0 +1,89 @@
+# Kortix is open source. This is a `kortix.yaml` v2 manifest example for a self-hosted deployment.
+#
+# The manifest is the Kortix layer of a project. It declares the sandbox image,
+# the connectors, the triggers, and each agent's grants. Agent behavior lives in
+# the agent's own markdown file, never here. Secret values stay in the platform.
+#
+# Validate it with `kortix validate`. See the deployment walkthrough at
+# https://opensourcecopilotalternative.com/self-hosting
+# yaml-language-server: $schema=https://kortix.com/schema/kortix.v2.schema.json
+kortix_version: 2
+default_agent: kortix
+
+project:
+  name: acme-copilot-alternative
+  description: Self-hosted Kortix deployment for Acme.
+
+env:
+  required: [DATABASE_URL]
+  optional: [STRIPE_API_KEY, WEBHOOK_SLACK_SECRET, GITHUB_AGENT_TOKEN]
+
+sandbox:
+  default: dev
+  templates:
+    - slug: dev
+      name: Development
+      # Replace with your own tag- or digest-pinned image.
+      image: ghcr.io/your-org/kortix-sandbox:latest
+      cpu: 2
+      memory: 4
+      disk: 20
+
+opencode:
+  config_dir: harnesses/opencode
+
+agents:
+  kortix:
+    file: agents/kortix.md
+    connectors: all
+    secrets: all
+    kortix_permissions: all
+    skills: all
+
+  support-triage:
+    file: agents/support-triage.md
+    sandbox: dev
+    connectors: [slack, gmail-read]
+    kortix_permissions: [project.gitops.push]
+    secrets: [GITHUB_AGENT_TOKEN]
+
+connectors:
+  - slug: gmail-read
+    name: Gmail read only
+    provider: pipedream
+    app: gmail
+    authorization_strategy: user
+    policies:
+      - match: search_email
+        action: always_run
+      - match: send_email
+        action: require_approval
+
+  - slug: slack
+    name: Slack
+    provider: channel
+    platform: slack
+
+policy:
+  default_mode: allow_all
+
+triggers:
+  - slug: daily-digest
+    name: Daily digest
+    type: cron
+    agent: kortix
+    enabled: true
+    cron: '0 0 9 * * 1-5'
+    timezone: America/Los_Angeles
+    model: anthropic/your-model
+    prompt: |
+      Summarize yesterday's support tickets and open a change request with the digest.
+
+  - slug: on-new-ticket
+    name: Triage a new ticket
+    type: webhook
+    agent: support-triage
+    enabled: false
+    secret_env: WEBHOOK_SLACK_SECRET
+    prompt: |
+      Draft a first-pass reply for the new ticket and hold it for approval.
