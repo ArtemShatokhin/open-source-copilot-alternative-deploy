@@ -1,0 +1,133 @@
+# Kortix is open source. This is a self-hosted deployment template: one Docker Compose stack.
+#
+# This is a minimal, editable version of the stack `kortix self-host init` renders
+# into ~/.config/kortix/self-host/<instance>/. The official installer pins the
+# Supabase images by digest and renders a Caddyfile that also routes api.<domain>
+# to the LLM gateway. Replace the image tags below to pin your own versions.
+#
+# Create a .env beside this file with at least:
+#   KORTIX_DOMAIN=kortix.example.com
+#   POSTGRES_PASSWORD=<a long random string>
+#   SANDBOX_PROVIDER=daytona
+#   SANDBOX_PROVIDER_KEY=<your sandbox provider key>
+#   ANTHROPIC_API_KEY=<key>        # or OPENAI_API_KEY, or your own provider key
+#
+# Sessions run on the sandbox provider, not in this stack. Full guide and the
+# live self-hosting page: https://opensourcecopilotalternative.com/self-hosting
+
+name: kortix
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      KORTIX_DOMAIN: ${KORTIX_DOMAIN}
+    # The image entrypoint is already `caddy`, so the command starts at the verb.
+    command: reverse-proxy --from ${KORTIX_DOMAIN} --to frontend:3000
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    networks: [kortix]
+
+  frontend:
+    image: kortix/frontend:stable
+    restart: unless-stopped
+    environment:
+      KORTIX_DOMAIN: ${KORTIX_DOMAIN}
+    depends_on:
+      - kortix-api
+    networks: [kortix]
+
+  kortix-api:
+    image: kortix/kortix-api:stable
+    restart: unless-stopped
+    environment:
+      KORTIX_DOMAIN: ${KORTIX_DOMAIN}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@supabase-db:5432/postgres
+      SUPABASE_URL: http://supabase-kong:8000
+      LLM_GATEWAY_URL: http://llm-gateway:8000
+      SANDBOX_PROVIDER: ${SANDBOX_PROVIDER:-daytona}
+      SANDBOX_PROVIDER_KEY: ${SANDBOX_PROVIDER_KEY}
+    volumes:
+      - ./volumes/storage:/app/storage
+    mem_limit: 640m
+    depends_on:
+      - supabase-db
+      - llm-gateway
+    networks: [kortix]
+
+  llm-gateway:
+    image: kortix/llm-gateway:stable
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@supabase-db:5432/postgres
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      - supabase-db
+    networks: [kortix]
+
+  supabase-kong:
+    image: supabase/kong:2.8
+    restart: unless-stopped
+    environment:
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+    depends_on:
+      - supabase-auth
+      - supabase-rest
+    networks: [kortix]
+
+  supabase-auth:
+    image: supabase/gotrue:v2
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@supabase-db:5432/postgres
+    depends_on:
+      - supabase-db
+    networks: [kortix]
+
+  supabase-rest:
+    image: postgrest/postgrest:v12
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD}@supabase-db:5432/postgres
+    depends_on:
+      - supabase-db
+    networks: [kortix]
+
+  supabase-storage:
+    image: supabase/storage-api:v1
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@supabase-db:5432/postgres
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+    volumes:
+      - ./volumes/storage:/var/lib/storage
+    depends_on:
+      - supabase-db
+    networks: [kortix]
+
+  supabase-db:
+    image: supabase/postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - ./volumes/db/data:/var/lib/postgresql/data
+    networks: [kortix]
+
+networks:
+  kortix:
+
+volumes:
+  caddy_data:
+  caddy_config:
