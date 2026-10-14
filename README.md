@@ -104,3 +104,7 @@ Microsoft's own documentation describes Microsoft Copilot as an AI assistant wit
 - [Copilot Studio alternatives](https://opensourcecopilotalternative.com/copilot-studio-alternatives)
 
 Open source · Any model, your keys · Self-host, VPC, or on-prem
+
+## Where to read more
+
+The lane-by-lane reading on the companion site starts with [what Microsoft Copilot is](https://opensourcecopilotalternative.com/what-is-microsoft-copilot); the coding lane is covered by the [open-source GitHub Copilot alternatives](https://opensourcecopilotalternative.com/github-copilot-alternatives), the Microsoft 365 lanes by the [Microsoft 365 Copilot alternatives](https://opensourcecopilotalternative.com/microsoft-365-copilot-alternatives) and [Copilot for Teams](https://opensourcecopilotalternative.com/microsoft-copilot-for-teams), and the layer this stack runs by [open-source Copilot agent management](https://opensourcecopilotalternative.com/copilot-agent-management). [Is Microsoft Copilot free?](https://opensourcecopilotalternative.com/is-microsoft-copilot-free) covers the pricing question, and the [FAQ](https://opensourcecopilotalternative.com/faq) answers the rest of them.
