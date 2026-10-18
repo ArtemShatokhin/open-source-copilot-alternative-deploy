@@ -28,7 +28,7 @@ Approval gates you set, off until you set them. Each tool call is set to allow, 
 
 ## What does it cost to run this deployment?
 
-Self-host is free; the software and the compose stack cost nothing beyond the host you run it on and the model keys you bring. The managed cloud plan is $40 per seat per month with 2,500 credits per seat, pooled, and the free tier includes 200 credits a month and one project. Any provider, your keys.
+Self-host is free; the software and the compose stack cost nothing beyond the host you run it on and the model keys you bring. Paid plans start at $50 a month for 5,000 credits, and members are free, sharing one credit pool. Any provider, your keys.
 
 ## Is this repository affiliated with Microsoft or GitHub?
 
